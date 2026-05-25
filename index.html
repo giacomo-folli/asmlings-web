@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ASMLings — Learn x86 Assembly the Hard Way</title>
+  <meta name="description" content="A lightweight, interactive educational sandbox for Intel 8086 assembly programming with a Rust-based emulator runner." />
+  <meta property="og:title" content="ASMLings — Learn x86 Assembly the Hard Way" />
+  <meta property="og:description" content="A lightweight, interactive educational sandbox for Intel 8086 assembly programming with a Rust-based emulator runner." />
+  <meta property="og:url" content="https://giacomo-folli.github.io/asmlings" />
+  <meta name="twitter:card" content="summary_large_image" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg: #0c0e0f;
+      --surface: #111416;
+      --surface2: #181c1e;
+      --border: #252b2e;
+      --green: #39ff87;
+      --green-dim: #1a7a42;
+      --amber: #ffb347;
+      --red: #ff4d6d;
+      --blue: #4da6ff;
+      --text: #d6dde0;
+      --text-dim: #6b7a82;
+      --text-muted: #3d4a50;
+      --mono: 'IBM Plex Mono', monospace;
+      --sans: 'Space Grotesk', sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 16px;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* Scanline overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,0.03) 2px,
+        rgba(0,0,0,0.03) 4px
+      );
+      pointer-events: none;
+      z-index: 999;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 2rem;
+      height: 56px;
+      background: rgba(12,14,15,0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-logo {
+      font-family: var(--mono);
+      font-weight: 700;
+      font-size: 1rem;
+      color: var(--green);
+      letter-spacing: -0.02em;
+    }
+
+    .nav-logo span { color: var(--text-dim); }
+
+    .nav-links {
+      display: flex;
+      gap: 2rem;
+      list-style: none;
+    }
+
+    .nav-links a {
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      text-decoration: none;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover { color: var(--green); }
+
+    /* ── HERO ── */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 6rem 2rem 4rem;
+      max-width: 1100px;
+      margin: 0 auto;
+      position: relative;
+    }
+
+    .hero-badge {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      color: var(--green);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .hero-badge::before {
+      content: '';
+      display: inline-block;
+      width: 6px; height: 6px;
+      background: var(--green);
+      border-radius: 50%;
+      animation: blink 1.2s step-end infinite;
+    }
+
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+    h1 {
+      font-family: var(--mono);
+      font-size: clamp(2.4rem, 6vw, 4.5rem);
+      font-weight: 700;
+      line-height: 1.05;
+      letter-spacing: -0.03em;
+      color: #fff;
+      margin-bottom: 1.5rem;
+    }
+
+    h1 .accent { color: var(--green); }
+    h1 .dim { color: var(--text-dim); }
+
+    .hero-sub {
+      font-size: 1.15rem;
+      color: var(--text-dim);
+      max-width: 560px;
+      margin-bottom: 2.5rem;
+      line-height: 1.7;
+      font-weight: 300;
+    }
+
+    .hero-sub strong { color: var(--text); font-weight: 500; }
+
+    .hero-actions {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-decoration: none;
+      padding: 0.75rem 1.6rem;
+      border-radius: 3px;
+      border: 1px solid transparent;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      cursor: pointer;
+    }
+
+    .btn-primary {
+      background: var(--green);
+      color: #0c0e0f;
+      border-color: var(--green);
+    }
+
+    .btn-primary:hover {
+      background: transparent;
+      color: var(--green);
+    }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--text);
+      border-color: var(--border);
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--green);
+      color: var(--green);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-dim);
+      border-color: var(--border);
+      padding: 0.6rem 1.2rem;
+      font-size: 0.78rem;
+    }
+
+    .btn-ghost:hover {
+      color: var(--text);
+      border-color: var(--text-dim);
+    }
+
+    /* ── TERMINAL ── */
+    .terminal-wrap {
+      position: absolute;
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 420px;
+      display: none;
+    }
+
+    @media (min-width: 900px) {
+      .terminal-wrap { display: block; }
+      .hero { max-width: 1200px; }
+      h1 { max-width: 600px; }
+    }
+
+    .terminal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(57,255,135,0.05);
+    }
+
+    .terminal-bar {
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+      padding: 0.6rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .dot { width: 10px; height: 10px; border-radius: 50%; }
+    .dot-r { background: #ff5f57; }
+    .dot-y { background: #ffbd2e; }
+    .dot-g { background: #28c941; }
+
+    .terminal-title {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .terminal-body {
+      padding: 1.2rem 1.4rem;
+      font-family: var(--mono);
+      font-size: 0.82rem;
+      line-height: 1.9;
+    }
+
+    .t-prompt { color: var(--green); }
+    .t-cmd { color: #fff; }
+    .t-out { color: var(--text-dim); }
+    .t-ok { color: var(--green); }
+    .t-warn { color: var(--amber); }
+    .t-err { color: var(--red); }
+    .t-info { color: var(--blue); }
+    .t-cursor {
+      display: inline-block;
+      width: 8px; height: 1em;
+      background: var(--green);
+      vertical-align: text-bottom;
+      animation: blink 1s step-end infinite;
+    }
+
+    /* ── SECTION SHARED ── */
+    section {
+      padding: 5rem 2rem;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .section-label {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--green);
+      margin-bottom: 1rem;
+    }
+
+    h2 {
+      font-family: var(--mono);
+      font-size: clamp(1.6rem, 3.5vw, 2.4rem);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: #fff;
+      margin-bottom: 1rem;
+    }
+
+    .section-desc {
+      color: var(--text-dim);
+      max-width: 540px;
+      margin-bottom: 3rem;
+      font-size: 1.05rem;
+    }
+
+    hr.divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 0 2rem;
+    }
+
+    /* ── FOR WHO ── */
+    .for-who-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .for-who-card {
+      background: var(--surface);
+      padding: 2rem;
+      transition: background 0.2s;
+    }
+
+    .for-who-card:hover { background: var(--surface2); }
+
+    .card-icon {
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .card-title {
+      font-family: var(--mono);
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 0.5rem;
+      letter-spacing: -0.01em;
+    }
+
+    .card-desc {
+      font-size: 0.9rem;
+      color: var(--text-dim);
+      line-height: 1.6;
+    }
+
+    /* ── SETUP ── */
+    .setup-methods {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2.5rem;
+    }
+
+    .method-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+      transition: border-color 0.2s;
+    }
+
+    .method-card:hover { border-color: var(--green-dim); }
+
+    .method-header {
+      padding: 1rem 1.4rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .method-name {
+      font-family: var(--mono);
+      font-size: 0.82rem;
+      color: var(--green);
+      font-weight: 600;
+      letter-spacing: 0.05em;
+    }
+
+    .method-tag {
+      font-family: var(--mono);
+      font-size: 0.68rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 3px;
+      letter-spacing: 0.05em;
+    }
+
+    .tag-fast { background: rgba(57,255,135,0.1); color: var(--green); }
+    .tag-standard { background: rgba(77,166,255,0.1); color: var(--blue); }
+    .tag-manual { background: rgba(255,179,71,0.1); color: var(--amber); }
+
+    .method-body { padding: 1.2rem 1.4rem; }
+
+    .code-block {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 0.8rem 1rem;
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      color: var(--text);
+      overflow-x: auto;
+      margin-bottom: 0.8rem;
+      position: relative;
+    }
+
+    .code-block:last-child { margin-bottom: 0; }
+
+    .copy-btn {
+      position: absolute;
+      top: 0.4rem; right: 0.5rem;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 3px;
+      cursor: pointer;
+      transition: all 0.15s;
+      letter-spacing: 0.05em;
+    }
+
+    .copy-btn:hover { color: var(--green); border-color: var(--green-dim); }
+    .copy-btn.copied { color: var(--green); }
+
+    .nasm-note {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--amber);
+      border-radius: 4px;
+      padding: 1.2rem 1.4rem;
+      margin-top: 1.5rem;
+    }
+
+    .nasm-note-title {
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      color: var(--amber);
+      font-weight: 600;
+      margin-bottom: 0.6rem;
+      letter-spacing: 0.05em;
+    }
+
+    .nasm-note p {
+      font-size: 0.9rem;
+      color: var(--text-dim);
+      margin-bottom: 0.5rem;
+    }
+
+    .os-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 0.5rem;
+      margin-top: 0.8rem;
+    }
+
+    .os-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .os-name {
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      color: var(--text-dim);
+      min-width: 80px;
+    }
+
+    .os-cmd {
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      color: var(--text);
+    }
+
+    /* ── HOW IT WORKS ── */
+    .steps {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      max-width: 700px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .step {
+      display: grid;
+      grid-template-columns: 60px 1fr;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.2s;
+    }
+
+    .step:last-child { border-bottom: none; }
+    .step:hover { background: var(--surface); }
+
+    .step-num {
+      background: var(--surface2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--mono);
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--green);
+      border-right: 1px solid var(--border);
+    }
+
+    .step-content { padding: 1.4rem 1.6rem; }
+
+    .step-cmd {
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      color: var(--green);
+      margin-bottom: 0.3rem;
+      font-weight: 600;
+    }
+
+    .step-desc {
+      font-size: 0.9rem;
+      color: var(--text-dim);
+    }
+
+    /* ── CONTRIBUTE ── */
+    .contribute-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1rem;
+    }
+
+    .contrib-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 1.4rem;
+      text-decoration: none;
+      transition: all 0.2s;
+      display: block;
+    }
+
+    .contrib-card:hover {
+      border-color: var(--green-dim);
+      background: var(--surface2);
+      transform: translateY(-2px);
+    }
+
+    .contrib-icon {
+      font-size: 1.4rem;
+      margin-bottom: 0.8rem;
+    }
+
+    .contrib-title {
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 0.4rem;
+    }
+
+    .contrib-desc {
+      font-size: 0.85rem;
+      color: var(--text-dim);
+      line-height: 1.5;
+    }
+
+    /* ── SHARE / CTA ── */
+    .cta-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 3rem 2.5rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 1.5rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cta-section::before {
+      content: '';
+      position: absolute;
+      top: -60px; left: 50%;
+      transform: translateX(-50%);
+      width: 300px; height: 120px;
+      background: radial-gradient(ellipse, rgba(57,255,135,0.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .cta-section h2 { margin-bottom: 0; }
+
+    .share-links {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .share-link {
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      text-decoration: none;
+      padding: 0.55rem 1.1rem;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .share-link:hover {
+      color: var(--green);
+      border-color: var(--green-dim);
+    }
+
+    .url-chip {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 0.6rem 1.2rem;
+      font-family: var(--mono);
+      font-size: 0.82rem;
+      color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+    }
+
+    .url-chip span { color: var(--text); }
+
+    /* ── FOOTER ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: gap;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .footer-logo {
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--green);
+    }
+
+    .footer-meta {
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 1.5rem;
+      list-style: none;
+    }
+
+    .footer-links a {
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .footer-links a:hover { color: var(--green); }
+
+    /* ── STATS BAR ── */
+    .stats-bar {
+      display: flex;
+      gap: 2rem;
+      flex-wrap: wrap;
+      margin-top: 3rem;
+      padding-top: 2rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .stat {
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+
+    .stat-val {
+      font-family: var(--mono);
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--green);
+      letter-spacing: -0.02em;
+    }
+
+    .stat-label {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    /* ── MOBILE ── */
+    @media (max-width: 600px) {
+      nav { padding: 0 1rem; }
+      .nav-links { display: none; }
+      section { padding: 3.5rem 1.2rem; }
+      .hero { padding: 5rem 1.2rem 3rem; }
+      footer { flex-direction: column; gap: 1rem; text-align: center; }
+    }
+
+    /* ── ANIMATIONS ── */
+    .fade-in {
+      opacity: 0;
+      transform: translateY(16px);
+      transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+
+    .fade-in.visible {
+      opacity: 1;
+      transform: none;
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">⚙ ASM<span>lings</span></div>
+  <ul class="nav-links">
+    <li><a href="#for-who">For who?</a></li>
+    <li><a href="#setup">Setup</a></li>
+    <li><a href="#how">How it works</a></li>
+    <li><a href="#contribute">Contribute</a></li>
+    <li><a href="https://github.com/giacomo-folli/asmlings" target="_blank">GitHub ↗</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-badge">v0.1.3 · MIT License · Intel 8086</div>
+  <h1>
+    Learn <span class="accent">x86 assembly</span><br>
+    <span class="dim">the hard way.</span>
+  </h1>
+  <p class="hero-sub">
+    A sandboxed feedback loop powered by a <strong>Rust-based 16-bit x86 emulator</strong>.
+    Write code, save the file, see the result instantly. Inspired by Rustlings.
+  </p>
+  <div class="hero-actions">
+    <a href="#setup" class="btn btn-primary">→ Get started</a>
+    <a href="https://github.com/giacomo-folli/asmlings" target="_blank" class="btn btn-secondary">★ Star on GitHub</a>
+    <a href="https://crates.io/crates/asmlings" target="_blank" class="btn btn-ghost">crates.io ↗</a>
+  </div>
+
+  <div class="stats-bar">
+    <div class="stat">
+      <span class="stat-val">8086</span>
+      <span class="stat-label">Intel target</span>
+    </div>
+    <div class="stat">
+      <span class="stat-val">Rust</span>
+      <span class="stat-label">Emulator core</span>
+    </div>
+    <div class="stat">
+      <span class="stat-val">0</span>
+      <span class="stat-label">Dependencies to learn</span>
+    </div>
+    <div class="stat">
+      <span class="stat-val">MIT</span>
+      <span class="stat-label">License</span>
+    </div>
+  </div>
+
+  <!-- FLOATING TERMINAL -->
+  <div class="terminal-wrap">
+    <div class="terminal">
+      <div class="terminal-bar">
+        <div class="dot dot-r"></div>
+        <div class="dot dot-y"></div>
+        <div class="dot dot-g"></div>
+        <span class="terminal-title">asmlings — exercises/ex01_mov.asm</span>
+      </div>
+      <div class="terminal-body">
+        <div><span class="t-prompt">$</span> <span class="t-cmd">asmlings start</span></div>
+        <div><span class="t-info">🔍 Watching exercises/</span></div>
+        <div>&nbsp;</div>
+        <div><span class="t-out">── Exercise 01: MOV basics ──</span></div>
+        <div><span class="t-out">File: exercises/ex01_mov.asm</span></div>
+        <div>&nbsp;</div>
+        <div><span class="t-ok">✓ Compiled successfully</span></div>
+        <div><span class="t-ok">✓ ASSERT_REG: AX == 0x1337 ... OK</span></div>
+        <div><span class="t-ok">✓ ASSERT_MEM: [0x0200] == 0x42 ... OK</span></div>
+        <div>&nbsp;</div>
+        <div><span class="t-warn">⚠ Remove "; I AM NOT DONE" to advance</span></div>
+        <div>&nbsp;</div>
+        <div><span class="t-prompt">$</span> <span class="t-cursor"></span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr class="divider" />
+
+<!-- FOR WHO -->
+<section id="for-who" class="fade-in">
+  <div class="section-label">// 01 — audience</div>
+  <h2>Who is this for?</h2>
+  <p class="section-desc">ASMLings is built for people who want to understand computers at the instruction level, not just the framework level.</p>
+
+  <div class="for-who-grid">
+    <div class="for-who-card">
+      <div class="card-icon">🎓</div>
+      <div class="card-title">CS Students</div>
+      <div class="card-desc">Taking a computer architecture or systems course and need hands-on practice with registers, memory, and the instruction set beyond slides.</div>
+    </div>
+    <div class="for-who-card">
+      <div class="card-icon">🦀</div>
+      <div class="card-title">Rust & Systems Devs</div>
+      <div class="card-desc">You write low-level Rust and want to understand what the compiler emits, or need to read disassembled output without guessing.</div>
+    </div>
+    <div class="for-who-card">
+      <div class="card-icon">🔍</div>
+      <div class="card-title">Reverse Engineers</div>
+      <div class="card-desc">Learning to read or write x86 assembly for binary analysis, CTF challenges, or security research in a safe, instant-feedback environment.</div>
+    </div>
+    <div class="for-who-card">
+      <div class="card-icon">💡</div>
+      <div class="card-title">Curious Hackers</div>
+      <div class="card-desc">Anyone who has wondered "what actually happens when this runs" and wants to find out by doing — not by reading a textbook.</div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider" />
+
+<!-- SETUP -->
+<section id="setup" class="fade-in">
+  <div class="section-label">// 02 — installation</div>
+  <h2>Get it running in 2 minutes</h2>
+  <p class="section-desc">Pick your installation method. All paths end at the same place.</p>
+
+  <div class="setup-methods">
+    <div class="method-card">
+      <div class="method-header">
+        <span class="method-name">cargo-binstall</span>
+        <span class="method-tag tag-fast">FAST</span>
+      </div>
+      <div class="method-body">
+        <div class="code-block">
+          <button class="copy-btn" onclick="copyCode(this, 'cargo install cargo-binstall')">copy</button>
+          <span style="color:var(--green)">$</span> cargo install cargo-binstall
+        </div>
+        <div class="code-block">
+          <button class="copy-btn" onclick="copyCode(this, 'cargo binstall asmlings')">copy</button>
+          <span style="color:var(--green)">$</span> cargo binstall asmlings
+        </div>
+        <p style="font-size:0.8rem;color:var(--text-dim);margin-top:0.8rem">Skips compilation. Fastest install if you already have cargo-binstall.</p>
+      </div>
+    </div>
+
+    <div class="method-card">
+      <div class="method-header">
+        <span class="method-name">cargo install</span>
+        <span class="method-tag tag-standard">STANDARD</span>
+      </div>
+      <div class="method-body">
+        <div class="code-block">
+          <button class="copy-btn" onclick="copyCode(this, 'cargo install asmlings')">copy</button>
+          <span style="color:var(--green)">$</span> cargo install asmlings
+        </div>
+        <p style="font-size:0.8rem;color:var(--text-dim);margin-top:0.8rem">Compiles from source. Requires a Rust toolchain. Run <code style="color:var(--text)">rustup</code> to get one.</p>
+      </div>
+    </div>
+
+    <div class="method-card">
+      <div class="method-header">
+        <span class="method-name">Manual binary</span>
+        <span class="method-tag tag-manual">MANUAL</span>
+      </div>
+      <div class="method-body">
+        <p style="font-size:0.9rem;color:var(--text-dim);margin-bottom:0.8rem">Download a pre-built binary for your platform directly from GitHub Releases.</p>
+        <a href="https://github.com/giacomo-folli/asmlings/releases" target="_blank" class="btn btn-ghost" style="display:inline-flex">↗ GitHub Releases</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="nasm-note">
+    <div class="nasm-note-title">⚠ System Dependency: NASM required</div>
+    <p>ASMLings uses the <strong style="color:var(--text)">NASM assembler</strong> under the hood. Install it for your OS:</p>
+    <div class="os-grid">
+      <div class="os-row">
+        <span class="os-name">macOS</span>
+        <span class="os-cmd">brew install nasm</span>
+      </div>
+      <div class="os-row">
+        <span class="os-name">Ubuntu/Debian</span>
+        <span class="os-cmd">apt install nasm</span>
+      </div>
+      <div class="os-row">
+        <span class="os-name">Arch Linux</span>
+        <span class="os-cmd">pacman -S nasm</span>
+      </div>
+      <div class="os-row">
+        <span class="os-name">Windows</span>
+        <span class="os-cmd">winget install NASM</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider" />
+
+<!-- HOW IT WORKS -->
+<section id="how" class="fade-in">
+  <div class="section-label">// 03 — workflow</div>
+  <h2>How it works</h2>
+  <p class="section-desc">Three commands to go from zero to writing assembly with live feedback.</p>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">01</div>
+      <div class="step-content">
+        <div class="step-cmd">$ asmlings init</div>
+        <div class="step-desc">Extracts exercise files into an <code>exercises/</code> folder and sets up your progress tracker. Run once per workspace.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">02</div>
+      <div class="step-content">
+        <div class="step-cmd">$ asmlings start</div>
+        <div class="step-desc">Launches a persistent watch loop. Leave this running — it re-assembles and verifies your code every time you save a file.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">03</div>
+      <div class="step-content">
+        <div class="step-cmd">Edit → Save → Repeat</div>
+        <div class="step-desc">Open the current exercise in any editor. Follow the comment instructions. Make the assertions pass, then delete <code>; I AM NOT DONE</code> to advance.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">+</div>
+      <div class="step-content">
+        <div class="step-cmd">$ asmlings run</div>
+        <div class="step-desc">Runs the current exercise once without entering watch mode. Useful for CI or quick single-shot checks.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider" />
+
+<!-- CONTRIBUTE -->
+<section id="contribute" class="fade-in">
+  <div class="section-label">// 04 — contributing</div>
+  <h2>Help build it</h2>
+  <p class="section-desc">ASMLings is open source and contributions are genuinely welcome — exercises, bug fixes, docs, or the emulator core.</p>
+
+  <div class="contribute-grid">
+    <a class="contrib-card" href="https://github.com/giacomo-folli/asmlings/issues/new" target="_blank">
+      <div class="contrib-icon">🐛</div>
+      <div class="contrib-title">Report a bug</div>
+      <div class="contrib-desc">Found unexpected behavior? Open an issue with steps to reproduce and the exercise file.</div>
+    </a>
+    <a class="contrib-card" href="https://github.com/giacomo-folli/asmlings/tree/main/template_exercises" target="_blank">
+      <div class="contrib-icon">📝</div>
+      <div class="contrib-title">Add an exercise</div>
+      <div class="contrib-desc">Use the <code>template_exercises/</code> folder as a starting point. New topics — flags, loops, stack operations — are always useful.</div>
+    </a>
+    <a class="contrib-card" href="https://github.com/giacomo-folli/asmlings/pulls" target="_blank">
+      <div class="contrib-icon">⚙️</div>
+      <div class="contrib-title">Improve the emulator</div>
+      <div class="contrib-desc">The Rust core in <code>src/</code> handles 16-bit x86 emulation. More instructions, better error messages, CI improvements.</div>
+    </a>
+    <a class="contrib-card" href="https://github.com/giacomo-folli/asmlings/fork" target="_blank">
+      <div class="contrib-icon">🔀</div>
+      <div class="contrib-title">Fork & experiment</div>
+      <div class="contrib-desc">MIT licensed. Fork it, extend it for your own courses, adapt it for other architectures, or just poke around.</div>
+    </a>
+  </div>
+
+  <div style="margin-top:2rem">
+    <div class="code-block" style="max-width:480px">
+      <button class="copy-btn" onclick="copyCode(this, 'git clone https://github.com/giacomo-folli/asmlings.git\ncd asmlings\ncargo build')">copy</button>
+      <span style="color:var(--green)">$</span> git clone https://github.com/giacomo-folli/asmlings.git<br>
+      <span style="color:var(--green)">$</span> cd asmlings<br>
+      <span style="color:var(--green)">$</span> cargo build
+    </div>
+  </div>
+</section>
+
+<hr class="divider" />
+
+<!-- SHARE / CTA -->
+<section class="fade-in">
+  <div class="cta-section">
+    <div class="section-label">// share</div>
+    <h2>Know someone learning assembly?</h2>
+    <p style="color:var(--text-dim);max-width:440px;text-align:center">Send them here. Star the repo. The more people using it, the more exercises and emulator improvements land.</p>
+
+    <div class="url-chip">
+      <span>giacomo-folli.github.io/asmlings</span>
+      <button class="copy-btn" style="position:static" onclick="copyCode(this, 'https://giacomo-folli.github.io/asmlings')">copy</button>
+    </div>
+
+    <div class="share-links">
+      <a class="share-link" href="https://twitter.com/intent/tweet?text=ASMLings%20%E2%80%94%20an%20interactive%20Intel%208086%20assembly%20sandbox%20powered%20by%20Rust.%20Like%20Rustlings%20but%20for%20x86%20ASM.&url=https://github.com/giacomo-folli/asmlings" target="_blank">𝕏 Share on X</a>
+      <a class="share-link" href="https://www.reddit.com/submit?url=https://github.com/giacomo-folli/asmlings&title=ASMLings%20%E2%80%94%20interactive%20Intel%208086%20assembly%20sandbox" target="_blank">Reddit ↗</a>
+      <a class="share-link" href="https://news.ycombinator.com/submitlink?u=https://github.com/giacomo-folli/asmlings&t=ASMLings%20%E2%80%94%20Intel%208086%20assembly%20sandbox%20with%20Rust%20emulator" target="_blank">HN ↗</a>
+      <a class="share-link" href="https://github.com/giacomo-folli/asmlings" target="_blank">★ Star on GitHub</a>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">⚙ ASMLings</div>
+  <ul class="footer-links">
+    <li><a href="https://github.com/giacomo-folli/asmlings" target="_blank">GitHub</a></li>
+    <li><a href="https://crates.io/crates/asmlings" target="_blank">crates.io</a></li>
+    <li><a href="https://github.com/giacomo-folli/asmlings/releases" target="_blank">Releases</a></li>
+    <li><a href="https://github.com/giacomo-folli/asmlings/blob/main/README.md" target="_blank">README</a></li>
+  </ul>
+  <div class="footer-meta">MIT License · giacomo-folli</div>
+</footer>
+
+<script>
+  // Scroll animations
+  const observer = new IntersectionObserver(
+    entries => entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); }),
+    { threshold: 0.1 }
+  );
+  document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+  // Copy to clipboard
+  function copyCode(btn, text) {
+    navigator.clipboard.writeText(text).then(() => {
+      const orig = btn.textContent;
+      btn.textContent = 'copied!';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 1800);
+    });
+  }
+</script>
+</body>
+</html>
