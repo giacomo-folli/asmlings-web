@@ -1,14 +1,63 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" prefix="og: https://ogp.me/ns#">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ASMLings — Learn x86 Assembly the Hard Way</title>
-  <meta name="description" content="A lightweight, interactive educational sandbox for Intel 8086 assembly programming with a Rust-based emulator runner." />
-  <meta property="og:title" content="ASMLings — Learn x86 Assembly the Hard Way" />
-  <meta property="og:description" content="A lightweight, interactive educational sandbox for Intel 8086 assembly programming with a Rust-based emulator runner." />
-  <meta property="og:url" content="https://giacomo-folli.github.io/asmlings" />
+
+  <!-- ── Primary SEO ── -->
+  <title>ASMLings — Learn Intel 8086 Assembly with Instant Feedback</title>
+  <meta name="description" content="ASMLings is an interactive Intel 8086 assembly sandbox powered by a Rust emulator. Write code, save, see results instantly. Inspired by Rustlings." />
+  <meta name="keywords" content="assembly, x86, Intel 8086, asm, learning, sandbox, Rust, emulator, education, rustlings" />
+  <meta name="author" content="Giacomo Folli" />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://giacomo-folli.github.io/asmlings/" />
+
+  <!-- ── Open Graph ── -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="ASMLings" />
+  <meta property="og:title" content="ASMLings — Learn Intel 8086 Assembly with Instant Feedback" />
+  <meta property="og:description" content="An interactive Intel 8086 assembly sandbox powered by a Rust emulator. Write code, save the file, and see results instantly. Inspired by Rustlings." />
+  <meta property="og:url" content="https://giacomo-folli.github.io/asmlings/" />
+  <meta property="og:image" content="https://opengraph.githubassets.com/fe856b963bf9a790f7439df5a74e3f7c4bbe4bf23bca080b8da80c643833fd64/giacomo-folli/asmlings" />
+  <meta property="og:image:alt" content="ASMLings — Intel 8086 assembly learning sandbox" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="600" />
+  <meta property="og:locale" content="en_US" />
+
+  <!-- ── Twitter / X Card ── -->
   <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:site" content="@giacomo_folli" />
+  <meta name="twitter:creator" content="@giacomo_folli" />
+  <meta name="twitter:title" content="ASMLings — Learn Intel 8086 Assembly with Instant Feedback" />
+  <meta name="twitter:description" content="An interactive Intel 8086 assembly sandbox powered by a Rust emulator. Write code, save the file, get instant terminal feedback. Inspired by Rustlings." />
+  <meta name="twitter:image" content="https://opengraph.githubassets.com/fe856b963bf9a790f7439df5a74e3f7c4bbe4bf23bca080b8da80c643833fd64/giacomo-folli/asmlings" />
+  <meta name="twitter:image:alt" content="ASMLings — Intel 8086 assembly learning sandbox" />
+
+  <!-- ── Schema.org JSON-LD ── -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "ASMLings",
+    "description": "A lightweight, interactive educational sandbox for Intel 8086 assembly programming with a Rust-based emulator runner.",
+    "url": "https://giacomo-folli.github.io/asmlings/",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Windows, macOS, Linux",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+    "license": "https://opensource.org/licenses/MIT",
+    "author": {
+      "@type": "Person",
+      "name": "Giacomo Folli",
+      "url": "https://github.com/giacomo-folli"
+    },
+    "codeRepository": "https://github.com/giacomo-folli/asmlings",
+    "programmingLanguage": ["Rust", "Assembly"],
+    "keywords": "assembly, x86, Intel 8086, Rust, emulator, education"
+  }
+  </script>
+
+  <!-- ── Favicon (inline SVG as data URI) ── -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%230c0e0f'/><text x='4' y='24' font-size='22' font-family='monospace'>⚙</text></svg>" />
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@300;400;500;600&display=swap" rel="stylesheet">
